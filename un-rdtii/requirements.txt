@@ -1,0 +1,12 @@
+streamlit
+pdfplumber
+pdf2image
+surya-ocr
+requests
+beautifulsoup4
+pandas
+transformers
+torch
+sentence-transformers
+Pillow
+tqdm

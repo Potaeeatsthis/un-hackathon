@@ -1,0 +1,6 @@
+Teeramate-Resume.pdf
+
+__pycache__/
+*.pyc
+results.txt/
+un-rdtii/data/documents/*.pdf
