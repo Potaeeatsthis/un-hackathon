@@ -80,63 +80,69 @@ venv\Scripts\activate.bat     # Windows
 pip install -r requirements.txt
 ```
 
-### 4. Install Tesseract OCR (for scanned PDFs)
+### 4. Install poppler (for Surya OCR)
 
-Tesseract is optional but recommended. The app will show a warning if it is not installed.
+Poppler is required for PDF-to-image conversion used by Surya OCR:
 
 **Ubuntu / Debian:**
 ```bash
-sudo apt-get install tesseract-ocr
+sudo apt-get install poppler-utils
 ```
 
 **macOS (Homebrew):**
 ```bash
-brew install tesseract
+brew install poppler
 ```
 
 **Windows:**
-Download and run the installer from https://github.com/UB-Mannheim/tesseract/wiki
-Then add the installation folder (e.g., `C:\Program Files\Tesseract-OCR`) to your `PATH`.
+Download from https://github.com/oschwartz10612/poppler-windows/releases/ and add the `bin/` folder to your `PATH`.
+
+Note: Tesseract is no longer needed; Surya provides better OCR accuracy for scanned documents.
 
 ---
 
 ## Running the App
 
 ```bash
-cd rdtii-analyzer
+cd un-rdtii
 streamlit run app.py
 ```
 
 The app opens at http://localhost:8501
 
+**On first run:**
+- The CrossEncoder model (~500 MB) will be downloaded and cached
+- Surya OCR components will be initialized (required for scanned PDFs)
+- Subsequent runs will be instant as models are cached locally
+
 ---
 
 ## How the AI Works
 
-The tool uses **zero-shot classification** via the `facebook/bart-large-mnli` model from Hugging Face:
+The tool uses **Natural Language Inference (NLI)** via the `cross-encoder/nli-distilroberta-base` model from Hugging Face:
 
 1. PDF text is split into ~500-character chunks with 50-character overlap.
-2. Each chunk is run through the BART NLI model alongside all 10 indicator descriptions.
-3. The model outputs a confidence score (0–1) for each indicator.
-4. Only scores above **0.5** are kept and classified as:
+2. Each chunk is paired with all 10 indicator descriptions.
+3. The CrossEncoder model scores each (text, indicator) pair for semantic entailment.
+4. Scores are normalized to 0–1 and only kept above **0.5** confidence:
    - **Primary** (>0.85) — direct, explicit regulatory text
    - **Contextual** (0.70–0.85) — related provisions that imply the indicator
    - **Implicit** (0.50–0.70) — indirect or partial coverage
 
-Zero-shot classification means the model can categorize text into any category **without any fine-tuning or training data**. It works by framing classification as natural language inference: "Does this text entail this regulatory concept?"
+CrossEncoders are more accurate than pipeline-based models for NLI because they jointly score (premise, hypothesis) pairs rather than independently classifying text. This approach captures semantic relationships more precisely.
 
-The model is downloaded from Hugging Face on first run (~1.6 GB) and cached locally. All subsequent runs are fully offline.
+The model is downloaded from Hugging Face on first run (~500 MB) and cached locally. All subsequent runs are fully offline.
 
 ---
 
 ## Project Structure
 
 ```
-rdtii-analyzer/
-├── app.py              # Streamlit web interface
-├── crawler.py          # PDF downloader with fallback crawling
-├── extractor.py        # PDF text extraction with OCR fallback
-├── mapper.py           # AI zero-shot classification mapper
+un-rdtii/
+├── app.py              # Streamlit web interface with 4-page navigation
+├── crawler.py          # PDF downloader with fallback domain crawling
+├── extractor.py        # PDF text extraction + Surya OCR fallback
+├── mapper.py           # NLI-based indicator classification
 ├── requirements.txt    # Python dependencies
 ├── README.md           # This file
 └── data/
