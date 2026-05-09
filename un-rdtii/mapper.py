@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from transformers import pipeline
+from sentence_transformers import CrossEncoder
 
 from extractor import TextChunk
 
@@ -28,7 +28,7 @@ INDICATORS = {
     "7.5": "Government access to personal data — rules allowing authorities to request or access private data",
 }
 
-MODEL_NAME = "facebook/bart-large-mnli"
+MODEL_NAME = "cross-encoder/nli-distilroberta-base"
 CONFIDENCE_THRESHOLD = 0.5
 PRIMARY_THRESHOLD = 0.85
 CONTEXTUAL_THRESHOLD = 0.70
@@ -42,11 +42,7 @@ _classifier = None
 def _get_classifier():
     global _classifier
     if _classifier is None:
-        _classifier = pipeline(
-            "zero-shot-classification",
-            model=MODEL_NAME,
-            device=-1,  # CPU only; set to 0 for GPU
-        )
+        _classifier = CrossEncoder(MODEL_NAME)
     return _classifier
 
 def _score_to_match_level(score: float) -> str:
@@ -88,22 +84,28 @@ def map_chunks(
 
     for batch_start in range(0, total, BATCH_SIZE):
         batch = chunks[batch_start: batch_start + BATCH_SIZE]
-        batch_texts = [c.text for c in batch]
 
         try:
             # Run classification for each text in the batch
-            for idx, (text, chunk) in enumerate(zip(batch_texts, batch)):
-                result = classifier(text, candidate_labels, multi_label=True)
-
-                for label, score in zip(result["labels"], result["scores"]):
+            for chunk in batch:
+                # Create pairs: (text, label) for each candidate label
+                pairs = [(chunk.text, label) for label in candidate_labels]
+                
+                # CrossEncoder returns logits (raw scores)
+                scores = classifier.predict(pairs)
+                
+                # Normalize scores to 0-1 range using softmax-like approach
+                # Higher score = higher confidence
+                import numpy as np
+                normalized_scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-8)
+                
+                for label_idx, score in enumerate(normalized_scores):
                     if score < CONFIDENCE_THRESHOLD:
                         continue
-                    # Map label back to indicator id
-                    label_idx = candidate_labels.index(label)
                     ind_id = indicator_ids[label_idx]
 
                     if ind_id not in best_match or score > best_match[ind_id]["score"]:
-                        best_match[ind_id] = {"score": score, "chunk": chunk}
+                        best_match[ind_id] = {"score": float(score), "chunk": chunk}
 
                 processed += 1
                 if progress_callback:
