@@ -150,14 +150,6 @@ un-rdtii/
     └── results/        # JSON analysis results (auto-created)
 ```
 
----
-
-## License
-
-Apache License 2.0 — see [LICENSE](LICENSE) for details.
-
----
-
 ## Acknowledgements
 
 - [UN ESCAP](https://www.unescap.org/) — for organizing the hackathon and the RDTII framework
