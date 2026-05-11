@@ -131,8 +131,7 @@ The tool uses **Natural Language Inference (NLI)** via the `cross-encoder/nli-di
 
 CrossEncoders are more accurate than pipeline-based models for NLI because they jointly score (premise, hypothesis) pairs rather than independently classifying text. This approach captures semantic relationships more precisely.
 
-The model is downloaded from Hugging Face on first run (~500 MB) and cached locally. All subsequent runs are fully offline.
-
+The model is downloaded from Hugging Face on first run (~500 MB) and cached locally.
 ---
 
 ## Project Structure
