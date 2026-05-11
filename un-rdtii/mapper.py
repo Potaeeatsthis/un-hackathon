@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 from sentence_transformers import CrossEncoder
 
 from extractor import TextChunk
@@ -33,6 +34,7 @@ CONFIDENCE_THRESHOLD = 0.5
 PRIMARY_THRESHOLD = 0.85
 CONTEXTUAL_THRESHOLD = 0.70
 BATCH_SIZE = 8
+CANDIDATE_COUNT = 3
 
 # Module-level cache so the model is only loaded once per process
 _classifier = None
@@ -54,13 +56,69 @@ def _score_to_match_level(score: float) -> str:
         return "Implicit"
     return "No match"
 
+
+def _entailment_scores(raw_scores, classifier) -> np.ndarray:
+    """Convert NLI logits to entailment probabilities."""
+    scores = np.asarray(raw_scores, dtype=float)
+
+    if scores.ndim == 1:
+        # Some CrossEncoder models return one logit per pair. Keep this fallback
+        # so the mapper remains usable if MODEL_NAME changes later.
+        return 1 / (1 + np.exp(-scores))
+
+    if scores.ndim != 2:
+        raise ValueError(f"Unexpected model output shape: {scores.shape}")
+
+    id2label = getattr(classifier.model.config, "id2label", {})
+    entailment_idx = None
+    for idx, label in id2label.items():
+        if str(label).lower() == "entailment":
+            entailment_idx = int(idx)
+            break
+
+    if entailment_idx is None:
+        entailment_idx = 1
+
+    if entailment_idx >= scores.shape[1]:
+        raise ValueError(
+            f"Entailment label index {entailment_idx} is outside model output shape {scores.shape}"
+        )
+
+    shifted = scores - scores.max(axis=1, keepdims=True)
+    exp_scores = np.exp(shifted)
+    probabilities = exp_scores / exp_scores.sum(axis=1, keepdims=True)
+    return probabilities[:, entailment_idx]
+
+
+def _remember_candidate(candidates: dict[str, list[dict]], ind_id: str, score: float, chunk: TextChunk) -> None:
+    candidates.setdefault(ind_id, []).append({"score": float(score), "chunk": chunk})
+    candidates[ind_id].sort(key=lambda item: item["score"], reverse=True)
+    del candidates[ind_id][CANDIDATE_COUNT:]
+
+
+def _format_candidate_output(candidates: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    formatted: dict[str, list[dict]] = {}
+    for ind_id, matches in candidates.items():
+        indicator_name = INDICATORS[ind_id].split(" — ")[0]
+        formatted[ind_id] = [
+            {
+                "indicator_name": indicator_name,
+                "review_label": "Candidate evidence for review",
+                "confidence": round(item["score"], 4),
+                "exact_quote": item["chunk"].text,
+                "page_number": item["chunk"].page_number,
+            }
+            for item in matches
+        ]
+    return formatted
+
 # Main functions
 
-def map_chunks(
+def map_chunks_with_candidates(
     chunks: list[TextChunk],
     country: str,
     progress_callback=None,
-) -> dict[str, dict]:
+) -> tuple[dict[str, dict], dict[str, list[dict]]]:
     """
     Run zero-shot classification on each chunk against all 10 indicators.
 
@@ -78,6 +136,7 @@ def map_chunks(
 
     # best_match[indicator_id] = {"score": float, "chunk": TextChunk}
     best_match: dict[str, dict] = {}
+    candidates: dict[str, list[dict]] = {}
 
     total = len(chunks)
     processed = 0
@@ -91,18 +150,16 @@ def map_chunks(
                 # Create pairs: (text, label) for each candidate label
                 pairs = [(chunk.text, label) for label in candidate_labels]
                 
-                # CrossEncoder returns logits (raw scores)
-                scores = classifier.predict(pairs)
+                # NLI CrossEncoder returns logits for contradiction, entailment, neutral.
+                # Use entailment probability as the confidence score.
+                scores = _entailment_scores(classifier.predict(pairs), classifier)
                 
-                # Normalize scores to 0-1 range using softmax-like approach
-                # Higher score = higher confidence
-                import numpy as np
-                normalized_scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-8)
-                
-                for label_idx, score in enumerate(normalized_scores):
+                for label_idx, score in enumerate(scores):
+                    ind_id = indicator_ids[label_idx]
+                    _remember_candidate(candidates, ind_id, float(score), chunk)
+
                     if score < CONFIDENCE_THRESHOLD:
                         continue
-                    ind_id = indicator_ids[label_idx]
 
                     if ind_id not in best_match or score > best_match[ind_id]["score"]:
                         best_match[ind_id] = {"score": float(score), "chunk": chunk}
@@ -112,11 +169,8 @@ def map_chunks(
                     progress_callback(processed / total)
 
         except Exception as exc:
-            # Skip bad batch; continue processing
-            processed += len(batch)
-            if progress_callback:
-                progress_callback(processed / total)
-            continue
+            print(f"\n  Mapper error in batch starting at chunk {batch_start}: {exc}")
+            raise
 
     # Build final output dict
     output: dict[str, dict] = {}
@@ -137,6 +191,20 @@ def map_chunks(
         }
 
     _save_results(country, output)
+    return output, _format_candidate_output(candidates)
+
+
+def map_chunks(
+    chunks: list[TextChunk],
+    country: str,
+    progress_callback=None,
+) -> dict[str, dict]:
+    """
+    Run zero-shot classification and return confirmed matches only.
+
+    Use map_chunks_with_candidates() when low-confidence review candidates are needed.
+    """
+    output, _candidates = map_chunks_with_candidates(chunks, country, progress_callback)
     return output
 
 # Results persistence
@@ -191,7 +259,7 @@ if __name__ == "__main__":
         print(f"  {len(extraction.chunks)} chunks extracted")
         print(f"  Running AI analysis...")
 
-        results = map_chunks(
+        results, candidates = map_chunks_with_candidates(
             extraction.chunks,
             country,
             progress_callback=lambda p: print(f"  {p*100:.0f}%", end="\r"),
@@ -200,3 +268,20 @@ if __name__ == "__main__":
         print(f"\n  Matched {len(results)} indicators:")
         for ind_id, match in sorted(results.items()):
             print(f"  [{match['match_level']:9s}] {ind_id}: {match['indicator_name']} ({match['confidence']:.0%})")
+
+        print(f"\n  Candidate evidence for review:")
+        for ind_id, matches in sorted(candidates.items()):
+            low_confidence = [
+                match for match in matches
+                if match["confidence"] < CONFIDENCE_THRESHOLD
+            ][:CANDIDATE_COUNT]
+            if not low_confidence:
+                continue
+            print(f"  {ind_id}: {INDICATORS[ind_id].split(' — ')[0]}")
+            for idx, match in enumerate(low_confidence, start=1):
+                snippet = match["exact_quote"].replace("\n", " ")[:220]
+                suffix = "..." if len(match["exact_quote"]) > 220 else ""
+                print(
+                    f"    Candidate {idx}: {match['confidence']:.0%}, "
+                    f"page {match['page_number']} — {snippet}{suffix}"
+                )

@@ -1,4 +1,4 @@
-"""
+r"""
 crawler.py — PDF downloader for RDTII Regulatory Analyzer
 Downloads regulatory documents from SOURCES into data/documents/
 """

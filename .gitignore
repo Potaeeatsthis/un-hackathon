@@ -1,6 +1,14 @@
 Teeramate-Resume.pdf
 
+venv/
+.venv/
 __pycache__/
 *.pyc
+.env
 results.txt/
-un-rdtii/data/documents/*.pdf
+data/documents/
+data/extracted/
+data/results/
+un-rdtii/data/documents/
+un-rdtii/data/extracted/
+un-rdtii/data/results/
