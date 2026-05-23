@@ -1,0 +1,9 @@
+{
+  "id": "pydeck-missing-requirements",
+  "date": "2026-05-23",
+  "symptom": "World Map page crashes immediately with ModuleNotFoundError: No module named 'pydeck' on a fresh install",
+  "rootcause": "app.py imports pydeck but it is not listed in un-rdtii/requirements.txt",
+  "fix": "Add 'pydeck' to un-rdtii/requirements.txt",
+  "recurrence_risk": "low",
+  "tags": ["requirements", "streamlit", "world-map"]
+}

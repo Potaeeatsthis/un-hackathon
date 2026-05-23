@@ -1,0 +1,9 @@
+{
+  "id": "tesseract-misleading-warning",
+  "date": "2026-05-23",
+  "symptom": "Sidebar shows '[!] Tesseract not found. OCR fallback disabled.' even though the app uses Surya OCR, not Tesseract. Confuses contributors.",
+  "rootcause": "app.py:58-61 checks for the tesseract binary via shutil.which() and shows a warning, but the codebase migrated from Tesseract to Surya OCR. The check was never removed.",
+  "fix": "Remove the _check_tesseract() function and _tesseract_ok flag from app.py. Remove the sidebar warning block that references it.",
+  "recurrence_risk": "low",
+  "tags": ["ocr", "tesseract", "surya", "warning", "dead-code"]
+}

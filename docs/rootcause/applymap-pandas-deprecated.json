@@ -1,0 +1,9 @@
+{
+  "id": "applymap-pandas-deprecated",
+  "date": "2026-05-23",
+  "symptom": "Comparison Table page crashes with AttributeError: 'Styler' object has no attribute 'applymap' on pandas 2.1+",
+  "rootcause": "app.py:584 uses df.style.applymap() which was removed in pandas 2.1 and replaced by df.style.map()",
+  "fix": "Change df.style.applymap(_style_cell, ...) to df.style.map(_style_cell, ...) in app.py:584",
+  "recurrence_risk": "low",
+  "tags": ["pandas", "streamlit", "comparison-table", "deprecated-api"]
+}

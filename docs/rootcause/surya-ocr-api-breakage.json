@@ -1,0 +1,9 @@
+{
+  "id": "surya-ocr-api-breakage",
+  "date": "2026-05-23",
+  "symptom": "OCR fallback silently fails or throws ImportError / TypeError on modern surya-ocr installs. Scanned PDF pages return empty text.",
+  "rootcause": "extractor.py:69 calls run_ocr([page_image], [_surya_model], lang=['en']) and uses ModelLst() — both the function signature and model loader changed in surya-ocr >= 0.6. The current call pattern matches an older API.",
+  "fix": "Check installed surya-ocr version. For >= 0.6, replace ModelLst() with the new model loading API and update the run_ocr() call signature to match. Pin surya-ocr version in requirements.txt once confirmed working.",
+  "recurrence_risk": "high",
+  "tags": ["ocr", "surya", "extractor", "scanned-pdf", "api-change"]
+}

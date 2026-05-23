@@ -1,0 +1,9 @@
+{
+  "id": "readme-model-name-mismatch",
+  "date": "2026-05-23",
+  "symptom": "README says the app uses 'facebook/bart-large-mnli' but the actual model loaded is 'cross-encoder/nli-distilroberta-base'. Misleads contributors about hardware requirements and model behaviour.",
+  "rootcause": "The model was changed from bart-large-mnli to cross-encoder/nli-distilroberta-base during development but the README was not updated.",
+  "fix": "Update README.md — replace all references to 'facebook/bart-large-mnli' with 'cross-encoder/nli-distilroberta-base'. Also update the model size note (~500 MB is correct for the CrossEncoder).",
+  "recurrence_risk": "low",
+  "tags": ["readme", "documentation", "model", "nli"]
+}
