@@ -148,6 +148,9 @@ pipeline.query(question: str)  → generator[str]   # streamed answer + sources
 # Python 3.11+
 pip install -r requirements.txt
 
+# Required after pip install — Playwright needs its browser binaries
+playwright install chromium
+
 # For GPU (optional — CPU works without this)
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 ```

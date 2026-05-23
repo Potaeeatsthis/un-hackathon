@@ -152,6 +152,6 @@ un-rdtii/
 ## Acknowledgements
 
 - [UN ESCAP](https://www.unescap.org/) — for organizing the hackathon and the RDTII framework
-- [Hugging Face](https://huggingface.co/facebook/bart-large-mnli) — for the `facebook/bart-large-mnli` model
+- [Hugging Face](https://huggingface.co/cross-encoder/nli-distilroberta-base) — for the `cross-encoder/nli-distilroberta-base` model
 - [Streamlit](https://streamlit.io/) — for the web framework
 - [pdfplumber](https://github.com/jsvine/pdfplumber) — for PDF extraction
