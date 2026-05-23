@@ -10,3 +10,4 @@ torch
 sentence-transformers
 Pillow
 tqdm
+pydeck

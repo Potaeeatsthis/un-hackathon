@@ -4,7 +4,6 @@ Streamlit web application for analyzing digital trade regulations.
 """
 
 import json
-import shutil
 import sys
 from pathlib import Path
 
@@ -54,12 +53,6 @@ def _init_state():
 
 _init_state()
 
-# Tesseract availability check
-def _check_tesseract() -> bool:
-    return shutil.which("tesseract") is not None
-
-_tesseract_ok = _check_tesseract()
-
 # Sidebar rendering
 def _render_sidebar():
     with st.sidebar:
@@ -107,8 +100,6 @@ Developed for the **UN ESCAP** Asia-Pacific hackathon on digital trade governanc
                 """
             )
 
-        if not _tesseract_ok:
-            st.warning("[!] Tesseract not found. OCR fallback disabled.")
 
 # Page: Home
 def _page_home():
@@ -581,7 +572,7 @@ def _page_comparison():
     df = _build_comparison_df()
 
     country_cols = [c for c in df.columns if c != "Indicator"]
-    styled = df.style.applymap(_style_cell, subset=country_cols)
+    styled = df.style.map(_style_cell, subset=country_cols)
     st.dataframe(styled, use_container_width=True, hide_index=True)
 
     st.divider()

@@ -12,11 +12,12 @@ import pdfplumber
 
 _OCR_AVAILABLE = False
 try:
-    from surya.ocr import run_ocr
-    from surya.model_lst import ModelLst
+    from surya.recognition import RecognitionPredictor
+    from surya.detection import DetectionPredictor
     from PIL import Image
     _OCR_AVAILABLE = True
-    _surya_model = None
+    _surya_recognition = None
+    _surya_detection = None
 except ImportError:
     pass
 
@@ -62,13 +63,15 @@ def _extract_page_text_with_ocr(page_image) -> str:
     if not _OCR_AVAILABLE:
         return ""
     try:
-        global _surya_model
-        if _surya_model is None:
-            _surya_model = ModelLst()
-        
-        ocr_result = run_ocr([page_image], [_surya_model], lang=["en"])
+        global _surya_recognition, _surya_detection
+        if _surya_recognition is None:
+            _surya_recognition = RecognitionPredictor()
+        if _surya_detection is None:
+            _surya_detection = DetectionPredictor()
+
+        results = _surya_recognition([page_image], det_predictor=_surya_detection)
         text_lines = []
-        for line in ocr_result[0].text_lines:
+        for line in results[0].text_lines:
             if line.text.strip():
                 text_lines.append(line.text)
         return "\n".join(text_lines)
