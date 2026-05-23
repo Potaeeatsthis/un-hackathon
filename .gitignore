@@ -14,3 +14,13 @@ data/results/
 un-rdtii/data/documents/
 un-rdtii/data/extracted/
 un-rdtii/data/results/
+
+un-rdtii/CLI_GUIDE.md
+
+*.faiss
+*.pkl
+cache/
+*.log
+.DS_Store
+*.pdf
+results.txt

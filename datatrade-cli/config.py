@@ -1,0 +1,60 @@
+"""
+config.py — All tuneable constants for the prototype.
+Edit here; never hardcode values in modules.
+"""
+
+import os
+import torch
+
+# ── Device ──────────────────────────────────────────────────────────────────
+DEVICE = (
+    "cuda" if torch.cuda.is_available()
+    else "mps" if torch.backends.mps.is_available()
+    else "cpu"
+)
+
+# ── Model IDs (HuggingFace) ──────────────────────────────────────────────────
+EMBED_MODEL_ID    = "BAAI/bge-m3"
+RERANKER_MODEL_ID = "BAAI/bge-reranker-v2-m3"
+LLM_MODEL_ID      = "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"  # 4-bit quant
+
+# ── Embedding ────────────────────────────────────────────────────────────────
+EMBED_DIM         = 1024          # BGE-M3 dense output dimension
+EMBED_BATCH_SIZE  = 8             # lower on CPU, raise on GPU
+SPARSE_TOP_K      = 20            # keep top-N sparse tokens per text
+
+# ── FAISS ────────────────────────────────────────────────────────────────────
+FAISS_TOP_K_RETRIEVE = 20         # initial retrieval before rerank
+FAISS_NLIST          = 50         # IVF clusters (used when index > 1000 vecs)
+
+# ── Reranker ─────────────────────────────────────────────────────────────────
+RERANK_TOP_N    = 5               # how many to keep after reranking
+RERANK_THRESHOLD = 0.60           # below this → trigger web fallback
+
+# ── Mock Redis TTL (seconds) ──────────────────────────────────────────────────
+TTL_QUERY_CACHE   = 3600          # 1 hour  — query answers
+TTL_TEMP_INDEX    = 72 * 3600     # 72 hours — uploaded PDF index
+TTL_COUNTRY_INDEX = None          # permanent — crawled country law
+
+# ── Segmenter ────────────────────────────────────────────────────────────────
+# Add more patterns here as needed
+SEGMENT_PATTERNS = [
+    r"(?i)^(section|article|มาตรา|pasal|điều|clause)\s*[\d]+",
+    r"(?i)^(\d+[\.\)])\s+\w",     # numbered list like "1. " or "1) "
+]
+MIN_SEGMENT_CHARS = 80            # discard segments shorter than this
+
+# ── Crawler ──────────────────────────────────────────────────────────────────
+CRAWL_TIMEOUT_MS    = 30_000      # Playwright navigation timeout
+CRAWL_USER_AGENT    = (
+    "Mozilla/5.0 (compatible; PrototypeBot/1.0)"
+)
+
+# ── LLM Generation ───────────────────────────────────────────────────────────
+LLM_MAX_NEW_TOKENS  = 512
+LLM_TEMPERATURE     = 0.2
+LLM_CONTEXT_CHUNKS  = 5          # how many reranked chunks to pass to LLM
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+CACHE_DIR = os.path.expanduser("~/.prototype_cache")
+os.makedirs(CACHE_DIR, exist_ok=True)
