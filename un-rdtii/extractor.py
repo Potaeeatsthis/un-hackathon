@@ -78,43 +78,73 @@ def _extract_page_text_with_ocr(page_image) -> str:
     except Exception:
         return ""
 
-# Chunking
-def _chunk_text(text: str, page_number: int, chunk_size: int = 500, overlap: int = 50) -> list[TextChunk]:
+# Section-based chunking
+# Matches Thai มาตรา, English Article/Section/Chapter headings
+_SECTION_RE = re.compile(
+    r"(?:^|\n)"
+    r"(?:มาตรา\s+[๐-๙\d]+"
+    r"|Article\s+\d+\.?"
+    r"|Section\s+\d+\.?"
+    r"|Chapter\s+[IVXivx\d]+"
+    r")",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+def _chunk_by_sections(
+    page_texts: list[tuple[int, str]],
+) -> list[TextChunk]:
     """
-    Split text into chunks of at most chunk_size characters with overlap.
-    Tries to break at sentence boundaries ('. ', '? ', '! ') when possible.
+    Split text at legal section/article headings (มาตรา, Article, Section, Chapter).
+    Each section becomes one chunk attributed to the page where it starts.
+    Falls back to paragraph splitting if no section headers are found.
     """
-    chunks: list[TextChunk] = []
-    start = 0
-    chunk_index = 0
-    length = len(text)
+    import bisect
 
-    while start < length:
-        end = min(start + chunk_size, length)
+    # Combine all pages into a single stream, tracking page boundaries
+    combined = ""
+    offsets: list[int] = []   # char offset where each page starts
+    page_nums: list[int] = []
+    for page_num, text in page_texts:
+        offsets.append(len(combined))
+        page_nums.append(page_num)
+        combined += text + "\n\n"
 
-        if end < length:
-            # Try to find a natural break point (sentence boundary) near end
-            search_start = max(start, end - 80)
-            best_break = -1
-            for sep in (". ", "? ", "! ", "\n\n", "\n"):
-                pos = text.rfind(sep, search_start, end)
-                if pos != -1 and pos > best_break:
-                    best_break = pos + len(sep)
+    def _page_at(offset: int) -> int:
+        idx = bisect.bisect_right(offsets, offset) - 1
+        return page_nums[max(idx, 0)]
 
-            if best_break > start:
-                end = best_break
+    matches = list(_SECTION_RE.finditer(combined))
 
-        chunk_text = text[start:end].strip()
-        if chunk_text:
-            chunks.append(TextChunk(
-                text=chunk_text,
-                page_number=page_number,
-                chunk_index=chunk_index,
-            ))
-            chunk_index += 1
+    # No section headers found — fall back to paragraph splitting
+    if not matches:
+        chunks: list[TextChunk] = []
+        idx = 0
+        for page_num, text in page_texts:
+            for para in re.split(r"\n{2,}", text):
+                para = para.strip()
+                if para:
+                    chunks.append(TextChunk(text=para, page_number=page_num, chunk_index=idx))
+                    idx += 1
+        return chunks
 
-        # Advance with overlap
-        start = end - overlap if end < length else length
+    # Build section boundaries: list of (start, end) in combined text
+    boundaries = [(m.start(), matches[i + 1].start() if i + 1 < len(matches) else len(combined))
+                  for i, m in enumerate(matches)]
+
+    # Also capture any preamble text before the first section header
+    chunks = []
+    idx = 0
+    preamble = combined[: matches[0].start()].strip()
+    if preamble:
+        chunks.append(TextChunk(text=preamble, page_number=page_nums[0], chunk_index=idx))
+        idx += 1
+
+    for start, end in boundaries:
+        section_text = combined[start:end].strip()
+        if section_text:
+            chunks.append(TextChunk(text=section_text, page_number=_page_at(start), chunk_index=idx))
+            idx += 1
 
     return chunks
 
@@ -139,9 +169,8 @@ def extract_text(pdf_path: str, progress_callback=None) -> ExtractionResult:
             error=f"File not found: {pdf_path}",
         )
 
-    all_page_texts: list[str] = []
+    page_texts: list[tuple[int, str]] = []  # (page_number, cleaned_text)
     ocr_pages: list[int] = []
-    all_chunks: list[TextChunk] = []
 
     try:
         with pdfplumber.open(str(path)) as pdf:
@@ -171,14 +200,13 @@ def extract_text(pdf_path: str, progress_callback=None) -> ExtractionResult:
                         ocr_pages.append(i + 1)
 
                 if cleaned:
-                    all_page_texts.append(cleaned)
-                    page_chunks = _chunk_text(cleaned, page_number=i + 1)
-                    all_chunks.extend(page_chunks)
+                    page_texts.append((i + 1, cleaned))
 
         if progress_callback:
             progress_callback(1.0)
 
-        full_text = "\n\n".join(all_page_texts)
+        all_chunks = _chunk_by_sections(page_texts)
+        full_text = "\n\n".join(text for _, text in page_texts)
         return ExtractionResult(
             full_text=full_text,
             chunks=all_chunks,

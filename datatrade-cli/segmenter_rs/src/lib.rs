@@ -15,8 +15,6 @@ fn get_patterns() -> &'static Vec<Regex> {
     })
 }
 
-const MIN_SEGMENT_CHARS: usize = 80;
-
 fn match_header(line: &str) -> Option<String> {
     let trimmed = line.trim();
     for pat in get_patterns() {
@@ -49,8 +47,6 @@ fn segment(
     country: &str,
     min_chars: usize,
 ) -> PyResult<Vec<PyObject>> {
-    let min_chars = if min_chars == 80 { MIN_SEGMENT_CHARS } else { min_chars };
-
     // Build flat line list: (line_text, page_number)
     let mut lines: Vec<(String, i64)> = Vec::new();
     for item in pages.iter() {

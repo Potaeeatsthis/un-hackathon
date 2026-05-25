@@ -184,21 +184,21 @@ class REPL:
         country = args[1].upper() if len(args) > 1 else "XX"
         doc_name = os.path.basename(path)
 
-        with console.status(f"[cyan]Running OCR on {doc_name}…[/cyan]"):
-            pages = self._get_ocr().run(path)
+        console.print(f"[cyan]Running OCR on {doc_name}…[/cyan]")
+        pages = self._get_ocr().run(path)
         console.print(f"[green]✓[/green] OCR: {len(pages)} pages")
 
-        with console.status("[cyan]Segmenting…[/cyan]"):
-            segs = self._get_seg().segment(pages, doc_name=doc_name, country=country)
+        console.print("[cyan]Segmenting…[/cyan]")
+        segs = self._get_seg().segment(pages, doc_name=doc_name, country=country)
         console.print(f"[green]✓[/green] Segments: {len(segs)}")
         _show_segments_preview(segs[:3])
 
-        with console.status("[cyan]Embedding…[/cyan]"):
-            texts = [s.text for s in segs]
-            embs  = self._get_embedder().embed(texts)
+        console.print("[cyan]Embedding…[/cyan]")
+        texts = [s.text for s in segs]
+        embs  = self._get_embedder().embed(texts)
 
-        with console.status("[cyan]Building FAISS Temp Index…[/cyan]"):
-            self._get_index().add([s.to_dict() for s in segs], embs, index="temp")
+        console.print("[cyan]Building FAISS Temp Index…[/cyan]")
+        self._get_index().add([s.to_dict() for s in segs], embs, index="temp")
 
         console.print(f"[green]✓[/green] Temp Index ready — {len(segs)} vectors")
 

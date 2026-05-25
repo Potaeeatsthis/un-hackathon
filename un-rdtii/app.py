@@ -204,7 +204,8 @@ def _page_discovery():
             with col_info:
                 st.markdown(f"### {country}")
                 st.markdown(f"**Document:** {info['document_name']}")
-                st.markdown(f"**URL:** [{info['url']}]({info['url']})")
+                safe_url = info['url'].replace("[", "%5B").replace("]", "%5D").replace(" ", "%20")
+                st.markdown(f"**URL:** [{info['url']}]({safe_url})")
                 if info["downloaded"]:
                     st.success(f"[OK] Downloaded — {info['file_size_kb']} KB")
                 else:

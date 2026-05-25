@@ -80,7 +80,20 @@ def main():
     print("Loading models (this happens once)…")
     ocr = OCREngine()
     seg = Segmenter()
+
+    print("  Downloading embedder (BAAI/bge-m3)…")
     emb = Embedder()
+    emb.embed(["warmup"])  # triggers download
+
+    print("  Downloading reranker (BAAI/bge-reranker-v2-m3)…")
+    from modules.reranker import Reranker
+    Reranker()._load()
+
+    print("  Downloading LLM (Qwen2.5-7B)…")
+    from modules.llm import LLM
+    LLM()._load()
+
+    print("All models ready.\n")
 
     t0 = time.time()
     total = 0

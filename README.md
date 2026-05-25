@@ -10,7 +10,7 @@ Built for the [UN ESCAP Hackathon on Digital Trade Governance](https://www.unesc
 
 The RDTII Regulatory Analyzer automatically downloads, extracts, and analyzes national digital trade regulations from Thailand, Vietnam, and Indonesia. It maps regulatory text to the 10 indicators of the **Regulatory & Digital Trade Indicators Index (RDTII)** — specifically Pillars 6 (Cross-Border Data Flows) and 7 (Data Protection & Cybersecurity).
 
-The AI analysis runs entirely locally using [facebook/bart-large-mnli](https://huggingface.co/facebook/bart-large-mnli) — no API key, no paid subscription, no internet connection required after the model and documents are downloaded once.
+The AI analysis runs entirely locally using [cross-encoder/nli-distilroberta-base](https://huggingface.co/cross-encoder/nli-distilroberta-base) — no API key, no paid subscription, no internet connection required after the model and documents are downloaded once.
 
 ---
 
@@ -121,7 +121,7 @@ The app opens at http://localhost:8501
 
 The tool uses **Natural Language Inference (NLI)** via the `cross-encoder/nli-distilroberta-base` model from Hugging Face:
 
-1. PDF text is split into ~500-character chunks with 50-character overlap.
+1. PDF text is split by legal section headings (มาตรา, Article, Chapter) so each chunk is one complete provision.
 2. Each chunk is paired with all 10 indicator descriptions.
 3. The CrossEncoder model scores each (text, indicator) pair for semantic entailment.
 4. Scores are normalized to 0–1 and only kept above **0.5** confidence:
