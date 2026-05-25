@@ -20,11 +20,12 @@ Usage:
 """
 
 import io
+import os
 import pickle
 import numpy as np
 from dataclasses import dataclass
 from typing import Literal, Optional
-from config import FAISS_TOP_K_RETRIEVE, TTL_TEMP_INDEX, TTL_COUNTRY_INDEX
+from config import FAISS_TOP_K_RETRIEVE, TTL_TEMP_INDEX, TTL_COUNTRY_INDEX, CACHE_DIR, COUNTRY_SOURCES
 
 # Import FAISS (CPU or GPU)
 try:
@@ -36,8 +37,9 @@ from modules.cache import cache
 from modules.embedder import Embedder
 
 
-IndexName = Literal["main", "temp", "both"]
-Country   = str   # e.g. "TH", "VN", "ID"
+IndexName  = Literal["main", "temp", "both"]
+Country    = str   # e.g. "TH", "VN", "ID"
+EMBED_DIM  = 1024  # BGE-M3 dense output dimension (re-exported for preload.py)
 
 
 @dataclass
@@ -145,6 +147,18 @@ class IndexManager:
         self.dim   = dim
         self._temp: Optional[_SingleIndex] = None
         self._main: dict[Country, _SingleIndex] = {}   # country → index
+        self._load_from_disk()
+
+    def _load_from_disk(self):
+        """Load pre-built country indexes from pkl files (created by preload.py)."""
+        for country in COUNTRY_SOURCES:
+            pkl_path = os.path.join(CACHE_DIR, f"faiss_{country}.pkl")
+            if os.path.exists(pkl_path) and country not in self._main:
+                try:
+                    with open(pkl_path, "rb") as f:
+                        self._main[country] = _SingleIndex.from_bytes(pickle.load(f))
+                except Exception:
+                    pass  # corrupt file — will fall back to lazy crawl
 
     # ── Add ────────────────────────────────────────────────────────────────────
 
@@ -198,6 +212,8 @@ class IndexManager:
                 hits += self._temp.search(q_dense, q_sparse, top_k, alpha)
 
         if index in ("both", "main"):
+            if not country:
+                self._ensure_all_main()
             targets = [country] if country else list(self._main.keys())
             for c in targets:
                 self._ensure_main(c)
@@ -246,3 +262,14 @@ class IndexManager:
             raw = cache.get(f"faiss:{country}")
             if raw:
                 self._main[country] = _SingleIndex.from_bytes(raw)
+
+    def _ensure_all_main(self):
+        """Load all cached country indexes not yet in memory (fresh-session discovery)."""
+        for key in cache.keys("faiss:*"):
+            if key == "faiss:temp":
+                continue
+            country = key.split(":", 1)[1]
+            if country not in self._main:
+                raw = cache.get(key)
+                if raw:
+                    self._main[country] = _SingleIndex.from_bytes(raw)

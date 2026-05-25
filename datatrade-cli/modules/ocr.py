@@ -51,18 +51,45 @@ class OCREngine:
         -------
         list of {"page": int, "text": str}
         """
-        self._load()
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")
 
         ext = path.suffix.lower()
         if ext == ".pdf":
+            # Fast path: try PyMuPDF first (text-based PDFs, ~seconds)
+            fast = self._run_pymupdf(path)
+            if fast:
+                return fast
+            # Slow path: Surya OCR for scanned PDFs (~minutes)
+            self._load()
             return self._run_pdf(path, langs)
         elif ext in {".jpg", ".jpeg", ".png", ".webp", ".tiff", ".bmp"}:
+            self._load()
             return self._run_image(path, langs)
         else:
             raise ValueError(f"Unsupported file type: {ext}")
+
+    def _run_pymupdf(self, path: Path) -> list[dict]:
+        """
+        Fast text extraction via PyMuPDF. Returns [] if PDF is scanned
+        (i.e. avg chars per page < 100, meaning no embedded text).
+        """
+        try:
+            import fitz  # PyMuPDF
+        except ImportError:
+            return []
+
+        pages = []
+        with fitz.open(str(path)) as doc:
+            for i, page in enumerate(doc):
+                text = page.get_text().strip()
+                pages.append({"page": i + 1, "text": text})
+
+        avg_chars = sum(len(p["text"]) for p in pages) / max(len(pages), 1)
+        if avg_chars < 100:
+            return []  # likely scanned — fall through to Surya
+        return pages
 
     def _run_pdf(self, path: Path, langs) -> list[dict]:
         try:

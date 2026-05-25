@@ -27,10 +27,11 @@ Usage:
 
 import hashlib
 import time
-from typing import Generator
+from typing import Generator, Optional
 from config import (
     TTL_QUERY_CACHE, RERANK_TOP_N,
     FAISS_TOP_K_RETRIEVE, LLM_CONTEXT_CHUNKS,
+    COUNTRY_SOURCES,
 )
 
 from modules.cache      import cache
@@ -77,6 +78,12 @@ class Pipeline:
             q_emb["sparse"].items(), key=lambda x: x[1], reverse=True
         )[:5]
         yield _log("embed", "done", {"top_sparse_tokens": top_sparse})
+
+        # ── Step 2b: lazy-crawl country if detected and not cached ──────────
+        country = self._detect_country(question)
+        if country:
+            for event in self._ensure_country_indexed(country):
+                yield event
 
         # ── Step 3: FAISS search ─────────────────────────────────────────────
         yield _log("faiss", f"searching top-{FAISS_TOP_K_RETRIEVE}…")
@@ -136,6 +143,63 @@ class Pipeline:
         cache.set(cache_key, {"answer": full_answer, "sources": sources}, ttl=TTL_QUERY_CACHE)
         yield _log("cache", f"saved (TTL {TTL_QUERY_CACHE}s)", {"key": cache_key})
         yield _log("done", f"total {time.time()-t0:.2f}s")
+
+    # ── Country lazy-crawl helpers ────────────────────────────────────────────
+
+    def _detect_country(self, question: str) -> Optional[str]:
+        """Return country code if question mentions a known country, else None."""
+        q = question.lower()
+        if any(k in q for k in ("thailand", "thai", "ไทย", "pdpa")):
+            return "TH"
+        if any(k in q for k in ("vietnam", "viet", "vietnamese", "việt", "decree 13")):
+            return "VN"
+        if any(k in q for k in ("indonesia", "indonesian", "pasal", "pp71")):
+            return "ID"
+        return None
+
+    def _ensure_country_indexed(self, country: str) -> list[dict]:
+        """
+        If country is not in cache, crawl all its source URLs and index them.
+        Returns log events to yield to the caller.
+        """
+        logs = []
+        if cache.exists(f"faiss:{country}"):
+            logs.append(_log("lazy", f"{country} cache HIT — skipping crawl"))
+            return logs
+
+        urls = COUNTRY_SOURCES.get(country, [])
+        if not urls:
+            logs.append(_log("lazy", f"{country} cache MISS — no source URLs configured, skipping"))
+            return logs
+
+        logs.append(_log("lazy", f"{country} cache MISS — crawling {len(urls)} source(s)…"))
+
+        if self._crawler is None:
+            from modules.crawler import Crawler
+            self._crawler = Crawler()
+
+        from modules.segmenter import Segmenter
+        seg = Segmenter()
+
+        all_segs = []
+        for url in urls:
+            try:
+                result = self._crawler.fetch(url)
+                pages  = [{"page": 1, "text": result["text"]}]
+                segs   = seg.segment(pages, doc_name=url, country=country)
+                all_segs.extend(segs)
+                logs.append(_log("lazy", f"crawled {url} → {len(segs)} segments"))
+            except Exception as e:
+                logs.append(_log("lazy", f"crawl failed for {url}: {e}"))
+
+        if not all_segs:
+            logs.append(_log("lazy", f"no segments extracted for {country} — index not updated"))
+            return logs
+
+        embs = self.embedder.embed([s.text for s in all_segs])
+        self.index.add([s.to_dict() for s in all_segs], embs, index="main", country=country)
+        logs.append(_log("lazy", f"{country} indexed — {len(all_segs)} vectors saved permanently"))
+        return logs
 
     # ── Fallback helpers ──────────────────────────────────────────────────────
 

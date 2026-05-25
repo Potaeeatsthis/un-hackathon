@@ -1,0 +1,11 @@
+{
+  "id": "detect-country-false-positive",
+  "title": "_detect_country() false-positive on queries containing 'with '",
+  "severity": "medium",
+  "component": "datatrade-cli/modules/pipeline.py",
+  "symptom": "Any query containing the word 'with' (e.g. 'what are rules with data protection?') incorrectly triggers a Thailand country detection, causing an unnecessary crawl attempt for TH.",
+  "root_cause": "The keyword list included 'th ' (to catch the country code TH in queries). After .lower(), the substring 'th ' matches inside common English words like 'with ', 'health ', 'length '. Simple substring matching has no word-boundary awareness.",
+  "fix": "Removed 'th ' from the keyword list in _detect_country(). Thailand is already covered by 'thailand', 'thai', 'ไทย', and 'pdpa' — all of which are unambiguous.",
+  "fixed_in": "datatrade-cli/modules/pipeline.py — _detect_country()",
+  "date": "2026-05-25"
+}

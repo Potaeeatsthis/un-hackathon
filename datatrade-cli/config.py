@@ -55,6 +55,22 @@ LLM_MAX_NEW_TOKENS  = 512
 LLM_TEMPERATURE     = 0.2
 LLM_CONTEXT_CHUNKS  = 5          # how many reranked chunks to pass to LLM
 
+# ── Country Sources (lazy crawl on first miss) ────────────────────────────────
+# Add real URLs when available. Empty list = skip auto-crawl for that country.
+COUNTRY_SOURCES = {
+    "TH": [
+        # "https://ratchakitcha.soc.go.th/documents/17082307.pdf",        # PDPA
+        # "https://www.bot.or.th/content/dam/bot/fipcs/documents/FPG/2560/EngPDF/25600035.pdf",  # BoT
+        # "https://broadcast.nbtc.go.th/data/document/law/doc/th/580300000001.pdf",  # NBTC
+    ],
+    "VN": [
+        # "https://eurochamvn.org/wp-content/uploads/2023/02/Decree-13-2023-PDPD_EN_clean.pdf",  # Decree 13
+    ],
+    "ID": [
+        # "https://wplibrary.co.id/sites/default/files/PP%2071_2019%20%5BEng%5D%5BHO%5D.PDF",   # PP71
+    ],
+}
+
 # ── Paths ────────────────────────────────────────────────────────────────────
 CACHE_DIR = os.path.expanduser("~/.prototype_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)

@@ -80,6 +80,16 @@ If either import fails or `run_ocr` signature has changed, this is the issue.
 
 ---
 
+## §8 — `/ask` unexpectedly triggers Thailand crawl on unrelated queries
+
+**Rootcause:** `detect-country-false-positive`
+
+**Diagnose:** Query containing "with" (e.g. "what rules apply with data transfers?") triggers TH country detection. Seen in pipeline logs as `lazy: TH cache MISS — no source URLs configured`.
+
+**Fix:** Already applied — removed `"th "` from `_detect_country()` keyword list in `datatrade-cli/modules/pipeline.py`. Thailand is covered by `"thailand"`, `"thai"`, `"ไทย"`, `"pdpa"`.
+
+---
+
 ## §7 — `playwright install` not documented, web crawl fails
 
 **Diagnose:** `datatrade-cli` crawler uses Playwright but the install step is missing from docs.
