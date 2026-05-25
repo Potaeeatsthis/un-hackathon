@@ -157,6 +157,7 @@ class IndexManager:
                 try:
                     with open(pkl_path, "rb") as f:
                         self._main[country] = _SingleIndex.from_bytes(pickle.load(f))
+                    cache.set(f"loaded:{country}", True, ttl=TTL_COUNTRY_INDEX)
                 except Exception:
                     pass  # corrupt file — will fall back to lazy crawl
 

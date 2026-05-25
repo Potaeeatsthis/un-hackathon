@@ -24,3 +24,7 @@ cache/
 .DS_Store
 *.pdf
 results.txt
+
+# Rust build artifacts
+target/
+*.whl

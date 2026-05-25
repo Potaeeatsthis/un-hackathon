@@ -163,8 +163,8 @@ class Pipeline:
         Returns log events to yield to the caller.
         """
         logs = []
-        if cache.exists(f"faiss:{country}"):
-            logs.append(_log("lazy", f"{country} cache HIT — skipping crawl"))
+        if cache.exists(f"faiss:{country}") or cache.exists(f"loaded:{country}"):
+            logs.append(_log("lazy", f"{country} index loaded — skipping crawl"))
             return logs
 
         urls = COUNTRY_SOURCES.get(country, [])

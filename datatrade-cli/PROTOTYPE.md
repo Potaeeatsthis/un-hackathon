@@ -155,6 +155,26 @@ playwright install chromium
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 ```
 
+### Optional: Rust segmenter (faster, same output)
+
+`segmenter.py` automatically uses a Rust-compiled extension if available, otherwise falls back to pure Python — no action required to run the app.
+
+To enable the Rust path (~3× faster segmentation):
+
+```bash
+# 1. Install Rust (skip if already installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 2. Install maturin (Rust→Python build tool)
+pip install maturin
+
+# 3. Build and install the extension
+maturin build --release -m datatrade-cli/segmenter_rs/Cargo.toml
+pip install datatrade-cli/segmenter_rs/target/wheels/*.whl
+```
+
+After this, `from segmenter_rs import segment` succeeds and `_USE_RUST = True` activates automatically.
+
 ### requirements.txt covers
 - `surya-ocr`           — OCR
 - `FlagEmbedding`       — BGE-M3 dense + sparse

@@ -24,6 +24,12 @@ from dataclasses import dataclass, field
 from typing import Optional
 from config import SEGMENT_PATTERNS, MIN_SEGMENT_CHARS
 
+try:
+    from segmenter_rs import segment as _rust_segment
+    _USE_RUST = True
+except ImportError:
+    _USE_RUST = False
+
 
 @dataclass
 class Segment:
@@ -61,6 +67,10 @@ class Segmenter:
         2. Scan line-by-line for a pattern match → start a new segment.
         3. Anything before the first match → prepended to first segment.
         """
+        if _USE_RUST:
+            raw = _rust_segment(pages, doc_name, country, MIN_SEGMENT_CHARS)
+            return [Segment(**r) for r in raw]
+
         # Build a flat line list: (line_text, page_number)
         lines: list[tuple[str, int]] = []
         for p in pages:

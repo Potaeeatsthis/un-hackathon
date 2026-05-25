@@ -136,7 +136,7 @@ class Crawler:
         if self._browser:
             self._browser.close()
         if self._pw:
-            self._pw.__exit__(None, None, None)
+            self._pw.stop()
         self._browser = None
         self._pw = None
 
