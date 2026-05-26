@@ -16,7 +16,7 @@ DEVICE = (
 # ── Model IDs (HuggingFace) ──────────────────────────────────────────────────
 EMBED_MODEL_ID    = "BAAI/bge-m3"
 RERANKER_MODEL_ID = "BAAI/bge-reranker-v2-m3"
-LLM_MODEL_ID      = "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"  # 4-bit quant
+LLM_MODEL_ID      = "unsloth/Phi-3.5-mini-instruct-bnb-4bit"  # lightweight test; swap back to unsloth/Qwen2.5-7B-Instruct-bnb-4bit
 
 # ── Embedding ────────────────────────────────────────────────────────────────
 EMBED_DIM         = 1024          # BGE-M3 dense output dimension

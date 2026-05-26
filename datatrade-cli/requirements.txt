@@ -1,8 +1,8 @@
 # ── Core ML ───────────────────────────────────────────────────────────────────
-torch>=2.2.0                    # CPU build works; install CUDA wheel separately
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0
 transformers>=4.40.0
 accelerate>=0.28.0
-bitsandbytes>=0.43.0            # 4-bit quant for Qwen2.5 (GPU only, optional)
 sentencepiece                   # tokeniser dependency
 
 # ── Embedder + Reranker ────────────────────────────────────────────────────────
