@@ -2,25 +2,10 @@
 modules/segmenter.py — Pattern-based legal document segmenter.
 
 Detects section boundaries using regex (Section / Article / มาตรา / Pasal / Điều).
-Produces chunks with metadata that FAISS and the audit log can reference.
-
-Output schema per segment:
-    {
-      "section_id": "TH-มาตรา-28",
-      "page":        5,
-      "text":        "มาตรา 28 ผู้ควบคุมข้อมูลส่วนบุคคล...",
-      "doc_name":    "PDPA_2562.pdf",
-      "country":     "TH",
-    }
-
-Usage:
-    from modules.segmenter import Segmenter
-    seg = Segmenter()
-    segments = seg.segment(pages, doc_name="PDPA.pdf", country="TH")
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 from config import SEGMENT_PATTERNS, MIN_SEGMENT_CHARS
 
@@ -50,28 +35,18 @@ class Segment:
 
 
 class Segmenter:
-    # Compiled once at class level
     _PATTERNS = [re.compile(p, re.MULTILINE) for p in SEGMENT_PATTERNS]
 
     def segment(
         self,
-        pages: list[dict],          # output of ocr.run()
+        pages: list[dict],
         doc_name: str,
         country: str = "XX",
     ) -> list[Segment]:
-        """
-        Split OCR output into legal sections.
-
-        Strategy:
-        1. Join all pages into one stream, keeping page boundaries tagged.
-        2. Scan line-by-line for a pattern match → start a new segment.
-        3. Anything before the first match → prepended to first segment.
-        """
         if _USE_RUST:
             raw = _rust_segment(pages, doc_name, country, MIN_SEGMENT_CHARS)
             return [Segment(**r) for r in raw]
 
-        # Build a flat line list: (line_text, page_number)
         lines: list[tuple[str, int]] = []
         for p in pages:
             for line in p["text"].splitlines():
@@ -86,7 +61,6 @@ class Segmenter:
         for line_text, page_num in lines:
             hit = self._match_header(line_text)
             if hit:
-                # Flush previous segment
                 chunk = "\n".join(current_lines).strip()
                 if len(chunk) >= MIN_SEGMENT_CHARS:
                     segments.append(Segment(
@@ -103,7 +77,6 @@ class Segmenter:
             else:
                 current_lines.append(line_text)
 
-        # Flush last segment
         chunk = "\n".join(current_lines).strip()
         if len(chunk) >= MIN_SEGMENT_CHARS:
             segments.append(Segment(
@@ -117,15 +90,10 @@ class Segmenter:
         return segments
 
     def _match_header(self, line: str) -> Optional[str]:
-        """
-        Returns a normalised header label if line matches a section pattern,
-        e.g. "มาตรา-28" or "Article-7".
-        """
         line = line.strip()
         for pat in self._PATTERNS:
             m = pat.match(line)
             if m:
-                # Grab first 40 chars, sanitise for use as an ID token
                 label = re.sub(r"\s+", "-", line[:40]).strip("-")
                 return label
         return None
