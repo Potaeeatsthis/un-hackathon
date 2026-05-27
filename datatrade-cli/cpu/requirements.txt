@@ -1,0 +1,28 @@
+# ── ONNX Runtime (CPU) ────────────────────────────────────────────────────────
+onnxruntime>=1.17.0
+
+# ── Embedder + Reranker (ONNX via fastembed) ──────────────────────────────────
+fastembed>=0.3.0
+
+# ── FAISS (CPU) ──────────────────────────────────────────────────────────────
+faiss-cpu>=1.8.0
+
+# ── LLM (llama.cpp, in-process GGUF) ─────────────────────────────────────────
+llama-cpp-python>=0.2.79
+huggingface-hub>=0.23.0         # GGUF auto-download via Llama.from_pretrained
+
+# ── OCR ──────────────────────────────────────────────────────────────────────
+surya-ocr>=0.6.0
+pdf2image>=1.17.0
+Pillow>=10.0.0
+PyMuPDF>=1.24.0
+
+# ── Web crawl ────────────────────────────────────────────────────────────────
+playwright>=1.44.0
+# after install: playwright install chromium
+
+# ── REPL rendering ───────────────────────────────────────────────────────────
+rich>=13.7.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+numpy>=1.26.0
