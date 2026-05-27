@@ -15,7 +15,9 @@ import sys
 import pickle
 import time
 
-sys.path.insert(0, os.path.dirname(__file__))
+_here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _here)
+sys.path.insert(1, os.path.join(_here, '..', 'shared'))
 
 from config import COUNTRY_SOURCES, CACHE_DIR
 from modules.ocr import OCREngine

@@ -24,12 +24,17 @@ EMBED_BATCH_SIZE  = 8             # lower on CPU, raise on GPU
 SPARSE_TOP_K      = 20            # keep top-N sparse tokens per text
 
 # ── FAISS ────────────────────────────────────────────────────────────────────
-FAISS_TOP_K_RETRIEVE = 20         # initial retrieval before rerank
+FAISS_TOP_K_RETRIEVE = 10         # initial retrieval before rerank
 FAISS_NLIST          = 50         # IVF clusters (used when index > 1000 vecs)
 
 # ── Reranker ─────────────────────────────────────────────────────────────────
 RERANK_TOP_N    = 5               # how many to keep after reranking
 RERANK_THRESHOLD = 0.60           # below this → trigger web fallback
+
+# Skip reranker when FAISS results are decisive:
+#   top1 - top2 > RERANK_SKIP_MARGIN  AND  top1 > RERANK_SKIP_MIN_SCORE
+RERANK_SKIP_MARGIN    = 0.15
+RERANK_SKIP_MIN_SCORE = 0.70
 
 # ── Mock Redis TTL (seconds) ──────────────────────────────────────────────────
 TTL_QUERY_CACHE   = 3600          # 1 hour  — query answers

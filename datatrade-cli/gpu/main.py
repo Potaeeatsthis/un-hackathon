@@ -10,8 +10,9 @@ Type /help to see all commands.
 import sys
 import os
 
-# Make sure modules/ is importable regardless of CWD
-sys.path.insert(0, os.path.dirname(__file__))
+_here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _here)
+sys.path.insert(1, os.path.join(_here, '..', 'shared'))
 
 from rich.console import Console
 from rich.panel   import Panel

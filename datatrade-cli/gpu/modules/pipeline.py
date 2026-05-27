@@ -32,12 +32,13 @@ from config import (
     TTL_QUERY_CACHE, RERANK_TOP_N,
     FAISS_TOP_K_RETRIEVE, LLM_CONTEXT_CHUNKS,
     COUNTRY_SOURCES,
+    RERANK_SKIP_MARGIN, RERANK_SKIP_MIN_SCORE,
 )
 
 from modules.cache      import cache
 from modules.embedder   import Embedder
 from modules.faiss_index import IndexManager
-from modules.reranker   import Reranker
+from modules.reranker   import Reranker, RankedHit
 from modules.crawler    import Crawler
 from modules.llm        import LLM
 
@@ -92,15 +93,22 @@ class Pipeline:
             "top5": [{"id": h.section_id, "hybrid": round(h.hybrid_score, 3)} for h in hits[:5]]
         })
 
-        # ── Step 4: rerank ───────────────────────────────────────────────────
-        yield _log("rerank", f"reranking {len(hits)} hits → top-{RERANK_TOP_N}…")
-        ranked = self.reranker.rerank(question, hits, top_n=RERANK_TOP_N)
-        yield _log("rerank", "done", {
-            "top1": {
-                "id":    ranked[0].section_id if ranked else None,
-                "score": round(ranked[0].reranker_score, 3) if ranked else None,
-            }
-        })
+        # ── Step 4: rerank (skip if FAISS scores decisive) ──────────────────
+        if self._should_skip_rerank(hits):
+            yield _log("rerank", "SKIPPED — FAISS scores decisive")
+            ranked = [
+                RankedHit(hit=h, reranker_score=h.hybrid_score)
+                for h in hits[:RERANK_TOP_N]
+            ]
+        else:
+            yield _log("rerank", f"reranking {len(hits)} hits → top-{RERANK_TOP_N}…")
+            ranked = self.reranker.rerank(question, hits, top_n=RERANK_TOP_N)
+            yield _log("rerank", "done", {
+                "top1": {
+                    "id":    ranked[0].section_id if ranked else None,
+                    "score": round(ranked[0].reranker_score, 3) if ranked else None,
+                }
+            })
 
         # ── Step 5: fallback web search ──────────────────────────────────────
         if self.reranker.needs_fallback(ranked):
@@ -120,7 +128,6 @@ class Pipeline:
                     sparse_score=0.0,
                     hybrid_score=0.0,
                 )
-                from modules.reranker import RankedHit
                 ranked = [RankedHit(hit=web_hit, reranker_score=0.5)] + ranked
                 yield _log("fallback", "web chunk prepended to context")
             except Exception as e:
@@ -143,6 +150,17 @@ class Pipeline:
         cache.set(cache_key, {"answer": full_answer, "sources": sources}, ttl=TTL_QUERY_CACHE)
         yield _log("cache", f"saved (TTL {TTL_QUERY_CACHE}s)", {"key": cache_key})
         yield _log("done", f"total {time.time()-t0:.2f}s")
+
+    # ── Reranker skip logic ──────────────────────────────────────────────────
+
+    @staticmethod
+    def _should_skip_rerank(hits) -> bool:
+        """Skip reranker when top-1 is strong AND well-separated from top-2."""
+        if len(hits) < 2:
+            return False
+        top1 = hits[0].hybrid_score
+        top2 = hits[1].hybrid_score
+        return top1 > RERANK_SKIP_MIN_SCORE and (top1 - top2) > RERANK_SKIP_MARGIN
 
     # ── Country lazy-crawl helpers ────────────────────────────────────────────
 

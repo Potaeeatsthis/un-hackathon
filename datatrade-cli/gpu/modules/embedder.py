@@ -51,6 +51,22 @@ class Embedder:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
+    def offload(self):
+        """Move model to CPU and free VRAM. Automatically restored on next embed call."""
+        if self._model is None:
+            return
+        import torch
+        self._model.model.to("cpu")
+        torch.cuda.empty_cache()
+
+    def _ensure_gpu(self):
+        if self._model is None or DEVICE == "cpu":
+            return
+        import torch
+        device = next(self._model.model.parameters()).device
+        if str(device) == "cpu":
+            self._model.model.to(DEVICE)
+
     def embed(self, texts: list[str]) -> dict:
         """
         Embed a batch of texts (document side).
@@ -63,6 +79,7 @@ class Embedder:
         }
         """
         self._load()
+        self._ensure_gpu()
         output = self._model.encode(
             texts,
             batch_size=EMBED_BATCH_SIZE,
