@@ -1,4 +1,4 @@
-name: datatrade-gpu
+name: un-hack-gpu
 channels:
   - pytorch
   - nvidia

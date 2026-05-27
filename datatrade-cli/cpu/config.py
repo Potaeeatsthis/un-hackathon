@@ -25,7 +25,7 @@ LLM_N_CTX     = int(os.getenv("LLM_N_CTX", "4096"))
 LLM_N_THREADS = int(os.getenv("LLM_N_THREADS", str(os.cpu_count() or 4)))
 
 # ── Embedder (fastembed ONNX) ───────────────────────────────────────────────
-EMBED_MODEL_ID    = "BAAI/bge-m3"
+EMBED_MODEL_ID    = "jinaai/jina-embeddings-v3"
 EMBED_DIM         = 1024
 EMBED_BATCH_SIZE  = 8
 SPARSE_TOP_K      = 20
@@ -35,7 +35,7 @@ FAISS_TOP_K_RETRIEVE = 10
 FAISS_NLIST          = 50
 
 # ── Reranker (fastembed ONNX) ───────────────────────────────────────────────
-RERANKER_MODEL_ID  = "BAAI/bge-reranker-v2-m3"
+RERANKER_MODEL_ID  = "jinaai/jina-reranker-v2-base-multilingual"
 RERANK_TOP_N       = 5
 RERANK_THRESHOLD   = 0.60
 

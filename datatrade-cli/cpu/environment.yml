@@ -1,4 +1,4 @@
-name: datatrade-cpu
+name: un-hack-cpu
 channels:
   - conda-forge
   - defaults
