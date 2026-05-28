@@ -64,15 +64,15 @@ LLM_CONTEXT_CHUNKS  = 5          # how many reranked chunks to pass to LLM
 # Add real URLs when available. Empty list = skip auto-crawl for that country.
 COUNTRY_SOURCES = {
     "TH": [
-        # "https://ratchakitcha.soc.go.th/documents/17082307.pdf",        # PDPA
-        # "https://www.bot.or.th/content/dam/bot/fipcs/documents/FPG/2560/EngPDF/25600035.pdf",  # BoT
-        # "https://broadcast.nbtc.go.th/data/document/law/doc/th/580300000001.pdf",  # NBTC
+        "https://ratchakitcha.soc.go.th/documents/17082307.pdf",
+        "https://www.bot.or.th/content/dam/bot/fipcs/documents/FPG/2560/EngPDF/25600035.pdf",
+        "https://broadcast.nbtc.go.th/data/document/law/doc/th/580300000001.pdf",
     ],
     "VN": [
-        # "https://eurochamvn.org/wp-content/uploads/2023/02/Decree-13-2023-PDPD_EN_clean.pdf",  # Decree 13
+        "https://eurochamvn.org/wp-content/uploads/2023/02/Decree-13-2023-PDPD_EN_clean.pdf",
     ],
     "ID": [
-        # "https://wplibrary.co.id/sites/default/files/PP%2071_2019%20%5BEng%5D%5BHO%5D.PDF",   # PP71
+        "https://wplibrary.co.id/sites/default/files/PP%2071_2019%20%5BEng%5D%5BHO%5D.PDF",
     ],
 }
 
