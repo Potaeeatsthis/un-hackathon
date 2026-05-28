@@ -6,7 +6,7 @@ in one pass, same as the GPU version.
 """
 
 import numpy as np
-from config import EMBED_MODEL_ID, EMBED_BATCH_SIZE, SPARSE_TOP_K
+from config import EMBED_MODEL_ID, EMBED_BATCH_SIZE, EMBED_MAX_LENGTH, SPARSE_TOP_K
 
 
 class Embedder:
@@ -27,7 +27,9 @@ class Embedder:
             )
 
         self._dense_model = TextEmbedding(
-            self.model_id, providers=["CPUExecutionProvider"]
+            self.model_id,
+            providers=["CPUExecutionProvider"],
+            max_length=EMBED_MAX_LENGTH,
         )
 
         # BGE-M3 sparse may not be available in all fastembed versions

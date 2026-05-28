@@ -27,7 +27,8 @@ LLM_N_THREADS = int(os.getenv("LLM_N_THREADS", str(os.cpu_count() or 4)))
 # ── Embedder (fastembed ONNX) ───────────────────────────────────────────────
 EMBED_MODEL_ID    = "jinaai/jina-embeddings-v3"
 EMBED_DIM         = 1024
-EMBED_BATCH_SIZE  = 8
+EMBED_BATCH_SIZE  = 4
+EMBED_MAX_LENGTH  = 512  # cap ONNX alloc — jina-v3 at 8192 needs ~26 GB RAM
 SPARSE_TOP_K      = 20
 
 # ── FAISS ────────────────────────────────────────────────────────────────────
