@@ -45,6 +45,19 @@ class LLM:
         if LLM_GGUF_PATH and os.path.exists(LLM_GGUF_PATH):
             self._model = Llama(model_path=LLM_GGUF_PATH, **common)
         else:
+            from huggingface_hub import hf_hub_download, list_repo_files
+
+            # For split GGUFs, download all shards before loading
+            base = LLM_GGUF_FILE.replace("-00001-of-", "-*-of-").replace(".gguf", "")
+            all_files = list_repo_files(LLM_GGUF_REPO)
+            import fnmatch
+            shards = sorted(f for f in all_files if fnmatch.fnmatch(f, f"{base}*.gguf"))
+            if not shards:
+                shards = [LLM_GGUF_FILE]
+
+            for shard in shards:
+                hf_hub_download(repo_id=LLM_GGUF_REPO, filename=shard)
+
             self._model = Llama.from_pretrained(
                 repo_id=LLM_GGUF_REPO,
                 filename=LLM_GGUF_FILE,

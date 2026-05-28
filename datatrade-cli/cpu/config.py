@@ -20,7 +20,7 @@ DEVICE = "cpu"
 # Point LLM_GGUF_PATH at a local single-file GGUF for fully offline runs.
 LLM_GGUF_PATH = os.getenv("LLM_GGUF_PATH", "")
 LLM_GGUF_REPO = os.getenv("LLM_GGUF_REPO", "Qwen/Qwen2.5-7B-Instruct-GGUF")
-LLM_GGUF_FILE = os.getenv("LLM_GGUF_FILE", "*q4_k_m*.gguf")
+LLM_GGUF_FILE = os.getenv("LLM_GGUF_FILE", "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf")
 LLM_N_CTX     = int(os.getenv("LLM_N_CTX", "4096"))
 LLM_N_THREADS = int(os.getenv("LLM_N_THREADS", str(os.cpu_count() or 4)))
 
